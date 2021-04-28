@@ -1,0 +1,95 @@
+# Esercitazione, forse traccia 12/09/2012
+# Riempire un vettore di dimensione N e calcolarne la media dei valori.
+
+.data
+ messInputN:      .asciiz "Quanti numeri vuoi inserire? "
+ messInit:      .asciiz "Inizializzazione array..."
+ messDone:      .asciiz "...Fatto!"
+ messInput:      .asciiz "\nInserisci valore["
+ messInput2:      .asciiz "]: "
+ messOutput:      .asciiz "La media dei numeri e': "
+ 
+.text
+.globl main
+main:
+ la   $a0, messInputN
+ li   $v0, 4
+ syscall
+ 
+ li   $v0, 5
+ syscall
+ move   $s1, $v0            # $s0 contiene N: quanti elementi
+ move   $s0, $sp
+  
+ la   $a0, messInit
+ li   $v0, 4
+ syscall
+ 
+
+ move   $a0, $s0
+ move   $a1, $s1
+ jal   array_init            # Precondizione: stack pointer($a0), size($a1); Postcondizione: non ritorna nulla, riempie lo stack pointer
+ 
+ la   $a0, messDone
+ li   $v0, 4
+ syscall
+
+ la   $a0, messOutput
+ li   $v0, 4
+ syscall
+
+ move   $a0, $s0
+ move   $a1, $s1 
+ jal   avarage               # Precondizione: stack pointer($a0), size($a1); Postcondizione: $v0 contiene il valore della media aritmetica
+
+ move   $a0, $v0
+ li   $v0, 1               # Stampo $a0
+ syscall
+ 
+ li   $v0, 10               # Bye byeeeee
+ syscall 
+ 
+array_init:
+ move   $t0, $a0
+ move   $t1, $a1
+ li   $t2, 0               # Contatore.
+ loopinit:
+  la   $a0, messInput
+  li   $v0, 4
+  syscall
+  
+  move   $a0, $t2            # Stampo il contatore
+  li   $v0, 1
+  syscall
+  
+  la   $a0, messInput2
+  li   $v0, 4
+  syscall
+  
+  li   $v0, 5
+  syscall
+  sw   $v0, ($t0)
+  
+  addi   $t0, $t0, -4            # Mi sposto all'elemento successivo
+  addi    $t2, $t2, 1            # Incremento il contatore
+  blt   $t2, $t1, loopinit         # Iterazione per vero: finch� $t2 < $t1 esegui loopinit
+  j   return
+
+avarage:
+ move   $t0, $a0
+ move   $t1, $a1
+ li   $t2, 0               # Contatore
+ li   $t3, 0               # sommatore
+ loopavarage:
+  lw   $t4, ($t0)
+  add   $t3, $t3, $t4
+  addi   $t0, $t0, -4
+  addi   $t2, $t2, 1
+  blt   $t2, $t1, loopavarage
+  div   $t3, $t3, $t1            # Somma / N = Media
+  move   $v0, $t3
+  j   return
+
+
+return:
+ jr   $ra

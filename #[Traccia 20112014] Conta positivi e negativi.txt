@@ -1,0 +1,108 @@
+# Traccia del 20/11/2014:
+# Dovete scrivere un programma assembly il cui main allochi un arr di 5 interi sullo stack(cioè, arr è una variabile locale del main
+# non una variabile globale). Una funzione riempi_array riceve il puntatore all'array come parametro e riempie ogni singola componente arr[i]
+# con un valore ricevuto in input dall'utente. La funzione non ritorna alcun valore al main. Una seconda funzione conta_pos_neg riceve
+# come parametro l'indirizzo dell'array, esegue un loop(obbligatorio usare un loop!) per contare il numero di valori positivi e genativi,
+# e li ritorna in $v0 e $v1. Il main stampa infine i due valori ricevuti da conta_pos_neg.
+
+# è fondamentale utilizzare funzioni con scambio dei parametri, allocare l'array in area stack e trovare il max e il min mediante un loop
+
+# Output esemplificativo:
+# Dammi il valore di arr[0]: 11
+# Dammi il valore di arr[1]: -227
+# Dammi il valore di arr[2]: 175858
+# Dammi il valore di arr[3]: 0
+# Dammi il valore di arr[4]: -5858959
+# I valori positivi sono: 2
+# I valori negativi sono: 2
+# -- program is finished running --
+
+.data
+   messInput:      .asciiz "Dammi il valore di ["
+   messInput2:      .asciiz "]: "
+   messPositive:      .asciiz "\n\tI valori positivi sono: "
+   messNegative:      .asciiz "\n\tI valori negativi sono: "
+   
+.text
+.globl main
+main:
+                  # Devo allocare lo stackpointer di 5elementi *4 byte = 20, potrei fare addiu $sp, $sp, -20  invece procedo mediante shift:
+ addiu   $t0, $zero, 1
+ sll      $s0, $t0, 4      # Alloco lo stack pointer di 16byte
+ sll      $t0, $t0, 2      # Mi sposto di altri 4byte
+ addu    $s0, $s0, $t0      # s0 = 16+4 = 20
+ subu   $sp, $sp, $s0      # sp = sp - 20
+ #addiu   $s0, $zero, 20
+ #subu   $sp, $sp, $s0
+
+ move   $a0, $sp         # Copio sp in a0 per passarlo alla funzione
+ jal      riempi_array      # Precondizione: richiede in a0 l'indirizzo di inizio dello stackpointer. Postcondizione: non restituisce nulla, riempie lo stack poitner.
+ 
+ la      $a0, messPositive
+ li      $v0, 4
+ syscall
+ 
+ move   $a0, $sp
+ addu   $a1, $sp, $s0      # Per definire dove termina, adopero l'operatore aritmetico inverso usato per allocare lo spazio.
+ jal      conta_pos_neg      # Precondizione: in a0 l'indirizzo di partenza dello stackpointer e in a1 l'indirizzo di fine. Postcondizione: in v0 quanti positivi, in v1 quanti negativi
+ 
+ move   $a0, $v0
+ li      $v0, 1         # Stampo quanti positivi
+ syscall
+ 
+ la      $a0, messNegative
+ li      $v0, 4
+ syscall
+ 
+ move   $a0, $v1
+ li      $v0, 1         # Stampo quanti negativi
+ syscall
+ 
+ li      $v0, 10         # Dico al S.O. che ho terminato
+ syscall
+ 
+riempi_array:
+ move   $t0, $a0         # t0 = stack pointer
+ addiu   $t1, $zero, 1      # t1 = contatore
+ riempi_loop:
+  la      $a0, messInput
+  li      $v0, 4
+  syscall
+  
+  move   $a0, $t1         # Sposto il contatore in a0 al fine di stamparlo
+  li      $v0, 1
+  syscall
+  
+  la      $a0, messInput2
+  li      $v0, 4
+  syscall
+  
+  li      $v0, 5         # Read int
+  syscall
+  sw      $v0, ($t0)         # Copio l'elemento inserito da tastiera, nello stack pointer
+  
+  addiu   $t0, $t0, 4      # Mi sposto all'elemento successivo dello stack pointer
+  addiu   $t1, $t1, 1      # Incremento contatore
+  ble      $t1, 5, riempi_loop   # Iterazione per vero: finché il contatore è minore o uguale a 5 itero.
+  jr      $ra
+  
+conta_pos_neg:            # Precondizione: in a0 l'indirizzo di partenza dello stackpointer e in a1 l'indirizzo di fine. Postcondizione: in v0 quanti positivi, in v1 quanti negativi
+  addu   $v0, $zero, $zero   # Positivi
+  addu   $v1, $zero, $zero   # Negativi
+  conta_loop:
+   lw      $t0, ($a0)
+   bgtz   $t0, positivo
+   bltz   $t0, negativo
+                     # Altrimenti è zero e non ci serve
+   continua:
+    addiu   $a0, $a0, 4      # Mi sposto all'elemento successivo dello stack pointer
+    blt   $a0, $a1, conta_loop# Iterazione per vero: finché non arrivo all'indirizzo "finale" dello stack pointer, eseguo il ciclo.
+    jr      $ra
+    
+    positivo:
+     addiu   $v0, $v0, 1      # Incremento contatore positivi
+     j      continua
+     
+    negativo:
+     addiu   $v1, $v1, 1      # Incremento contatore negativi
+     j      continua
